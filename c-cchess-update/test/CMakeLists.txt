@@ -1,0 +1,8 @@
+add_executable(generate_move_unittest generate_move_unittest.cc)
+target_link_libraries(generate_move_unittest cchess_c)
+
+add_executable(backstep_unittest backstep_unittest.cc)
+target_link_libraries(backstep_unittest cchess_c)
+
+add_executable(cc_engine_test test_engine.cc)
+target_link_libraries(cc_engine_test cchess_c)
