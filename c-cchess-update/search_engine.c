@@ -89,8 +89,15 @@ static inline int null_safe(struct search_engine* engine)
 
 static inline void set_best_move(struct search_engine* engine, int mv, int depth)
 {
+  if (mv == 0) return;
+
 	engine->history_heuristic_table[mv] += depth * depth;
-	//int* killer_table = engine->killer_heuristic_table[depth];
+	int* killer_table = engine->killer_heuristic_table[depth];
+  if (mv != killer_table[0])
+  {
+    killer_table[1] = killer_table[0];
+    killer_table[0] = mv;
+  }
 }
 
 static inline void search_engine_do_null_move(struct search_engine* engine)
@@ -152,22 +159,24 @@ void moves_generate_sorter_init(struct moves_generate_sorter* sorter, struct sea
     qsort(sorter->mvs, n, sizeof(int), compare_by_history);
 		int tmp_killer_move1 = engine->killer_heuristic_table[engine->distance][0];
 		int tmp_killer_move2 = engine->killer_heuristic_table[engine->distance][1];
-		if (tmp_killer_move2 != 0 && bsearch(&tmp_killer_move2, sorter->mvs, n, sizeof(int), compare_by_search) != NULL)
-		{
-			sorter->killer_move2 = tmp_killer_move2;
-			sorter->state = STATE_KILLER2;
-		}
-		if (tmp_killer_move1 != 0 && 
-				bsearch(&tmp_killer_move1, sorter->mvs, n, sizeof(int), compare_by_search) != NULL)
-		{
-			sorter->killer_move1 = tmp_killer_move1;
-			sorter->state = STATE_KILLER1;
-		}
 		if (mv_tt != 0 &&
 				bsearch(&mv_tt, sorter->mvs, n, sizeof(int), compare_by_search) != NULL)
 		{
-			sorter->killer_move1 = tmp_killer_move1;
+			sorter->mv_tt = mv_tt;
 			sorter->state = STATE_TT;
+      // printf("在被将军的情况下，从生成的走法中取到置换表中最好的走法\n");
+		}
+		if (tmp_killer_move1 != 0 && bsearch(&tmp_killer_move1, sorter->mvs, n, sizeof(int), compare_by_search) != NULL)
+		{
+      // printf("在被将军的情况下，从生成的走法中取到杀手表1中的走法\n");
+			sorter->killer_move1 = tmp_killer_move1;
+      if (sorter->state == STATE_REST) sorter->state = STATE_KILLER1;
+		}
+		if (tmp_killer_move2 != 0 && bsearch(&tmp_killer_move2, sorter->mvs, n, sizeof(int), compare_by_search) != NULL)
+		{
+      // printf("在被将军的情况下，从生成的走法中取到杀手表2中的走法\n");
+			sorter->killer_move2 = tmp_killer_move2;
+			if (sorter->state == STATE_REST) sorter->state = STATE_KILLER2;
 		}
 	}
 	else
@@ -176,7 +185,7 @@ void moves_generate_sorter_init(struct moves_generate_sorter* sorter, struct sea
 		sorter->killer_move1 = engine->killer_heuristic_table[engine->distance][0];
     sorter->killer_move2 = engine->killer_heuristic_table[engine->distance][1];
   }
-	//sorter->state = mv_tt == 0 ? STATE_GENE : STATE_TT;
+  // printf("%d, %d, %d\n", sorter->mv_tt, sorter->killer_move1, sorter->killer_move2);
 }
 
 int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
@@ -210,14 +219,17 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 			//sorter->state = STATE_GENE;
 			sorter->state = STATE_KILLER1;
 			if (sorter->mv_tt != 0)
+      {
+				// printf("从置换表中检索到好棋\n");
 				return sorter->mv_tt;
+      }
 		case STATE_KILLER1:
 			sorter->state = STATE_KILLER2;
 			if (sorter->killer_move1 != 0 && 
 					sorter->killer_move1 != sorter->mv_tt &&
           legal_move(sorter->engine->board, sorter->killer_move1))
 			{
-				printf("从杀手表1中检索到杀棋\n");
+				// printf("从杀手表1中检索到杀棋\n");
 				return sorter->killer_move1;
 			}
 		case STATE_KILLER2:
@@ -227,7 +239,7 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 					sorter->killer_move2 != sorter->killer_move1 &&
           legal_move(sorter->engine->board, sorter->killer_move2))
 			{
-				printf("从杀手表2中检索到杀棋\n");
+				// printf("从杀手表2中检索到杀棋\n");
 				return sorter->killer_move2;
 			}
 		case STATE_GENE:
@@ -242,7 +254,10 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 				if (mv != sorter->mv_tt &&
 						mv != sorter->killer_move1 && 
 						mv != sorter->killer_move2)
+        {
+          // printf("依次从生成的所有走法中取出一步走法\n");
 					return mv;
+        }
 			}
 		default:
 			return 0;
@@ -267,6 +282,7 @@ void search_engine_reset(struct search_engine* engine)
 {
 	engine->distance = 0;
 	engine->all_nodes = 0;
+  engine->mv_best = 0;
 	memset(engine->history_heuristic_table, 0, sizeof(int) * HISTORY_HEURISTIC_TABLE_SIZE);
 	memset(engine->killer_heuristic_table, 0, sizeof(int) * 2 * LIMIT_DEPTH);
 	memset(engine->transposition_table, 0, sizeof(struct tt_item) * TRANSPOSITION_TABLE_SIZE);
@@ -406,8 +422,7 @@ int search_quiescence(struct search_engine* engine, int value_alpha, int value_b
 	for (int i = 0; i < n; ++i)
 	{
 		int mv = mvs[i];
-		if (!search_engine_make_move(engine, mv)) 
-			continue;
+		if (!search_engine_make_move(engine, mv)) continue;
 
 		value = -search_quiescence(engine, -value_beta, -value_alpha);
 		search_engine_undo_move(engine);
@@ -491,8 +506,7 @@ int search_full(struct search_engine* engine, int value_alpha, int value_beta, i
 
 	while ((mv = moves_generate_sorter_next_move(&sorter)) > 0)
 	{
-		if (!search_engine_make_move(engine, mv))
-			continue;
+		if (!search_engine_make_move(engine, mv)) continue;
 
 		//将军延伸(即将军的走法应该让它多搜索一层)
 		new_depth = will_kill_self_king(engine->board) ? depth : depth - 1;
@@ -569,8 +583,7 @@ int search_root(struct search_engine* engine, int depth)
 	for(int i = 0; i < n; ++i)
 	{
 		mv = mvs[i];
-		if (!search_engine_make_move(engine, mv))
-			continue;
+		if (!search_engine_make_move(engine, mv)) continue;
 
 		//将军延伸(即将军的走法应该让它多搜索一层)
 		new_depth = will_kill_self_king(engine->board) ? depth : depth - 1;
@@ -618,20 +631,29 @@ int search(struct search_engine* engine, int milliseconds)
 		uint64_t spendTime = now() - t;
 		if (spendTime >= milliseconds)
 		{
-				printf("搜索的层数：%d, best mv: %d\n", depth, engine->mv_best);
-				uint64_t nps = (uint64_t)engine->all_nodes * 1000 / spendTime;
-				printf("info spend time: %lu, all nodes: %d, speed: %lu nodes per second\n", 
-							 spendTime, engine->all_nodes, nps);
-				break;
+      char chinese_mv[50] = {0};
+      char iccs_mv[5] = {0};
+      move_to_iccs_move(iccs_mv, engine->mv_best);
+      board_to_chinese_mv(engine->board, chinese_mv, engine->mv_best);
+      printf("搜索的层数：%d, best mv: %d(%s %s)\n", depth, engine->mv_best, iccs_mv, chinese_mv);
+      uint64_t nps = (uint64_t)engine->all_nodes * 1000 / spendTime;
+      printf("info spend time: %lu, all nodes: %d, speed: %lu nodes per second\n", 
+             spendTime, engine->all_nodes, nps);
+      break;
 		}
 
 		// 搜索到杀棋，就终止搜索
 		if (value > WIN_VALUE || value < -WIN_VALUE)
 		{
+      const char* side = engine->board->current_side_player->side == SIDE_TYPE_RED ? "红方" : "黑方";
 			if (value > WIN_VALUE)
-				printf("已搜索到必胜之棋!\n");
+      {
+				printf("%s 已搜索到必胜之棋!\n", side);
+      }
 			else
-				printf("已搜索到必输之棋!\n");
+      {
+				printf("%s 已搜索到必输之棋!\n", side);
+      }
 			break;
 		}
 	}
