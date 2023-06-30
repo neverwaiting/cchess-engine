@@ -147,8 +147,8 @@ struct MatchContext
   void initEngine()
   {
     side = 0;
-    engines[0].reset(new CEnginePlayer(SIDE_TYPE_RED, 1000)); 
-    engines[1].reset(new CCEnginePlayer(SIDE_TYPE_BLACK, 1000)); 
+    engines[0].reset(new CCEnginePlayer(SIDE_TYPE_RED, 1000)); 
+    engines[1].reset(new StockfishEnginePlayer(SIDE_TYPE_BLACK, 1000)); 
   }
 
   std::string play()

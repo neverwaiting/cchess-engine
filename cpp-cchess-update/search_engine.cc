@@ -82,23 +82,26 @@ void moves_generate_sorter_init(struct moves_generate_sorter* sorter, SearchEngi
 		std::sort(sorter->mvs, sorter->mvs + n, CompareByHistory(engine));
 		int tmp_killer_move1 = engine->getKillerMove(0);
 		int tmp_killer_move2 = engine->getKillerMove(1);
-		if (tmp_killer_move2 != 0 && 
-				std::find(sorter->mvs, sorter->mvs + n, tmp_killer_move2) != sorter->mvs + n)
+		if (mv_tt != 0 &&
+				std::find(sorter->mvs, sorter->mvs + n, mv_tt) != sorter->mvs + n)
 		{
-			sorter->killer_move2 = tmp_killer_move2;
-			sorter->state = STATE_KILLER2;
+      sorter->mvs_idx = 1;
+			sorter->mv_tt = mv_tt;
+			sorter->state = STATE_TT;
 		}
 		if (tmp_killer_move1 != 0 && 
 				std::find(sorter->mvs, sorter->mvs + n, tmp_killer_move1) != sorter->mvs + n)
 		{
+      sorter->mvs_idx = 1;
 			sorter->killer_move1 = tmp_killer_move1;
-			sorter->state = STATE_KILLER1;
+			if (sorter->state == STATE_REST) sorter->state = STATE_KILLER1;
 		}
-		if (mv_tt != 0 &&
-				std::find(sorter->mvs, sorter->mvs + n, mv_tt) != sorter->mvs + n)
+		if (tmp_killer_move2 != 0 && 
+				std::find(sorter->mvs, sorter->mvs + n, tmp_killer_move2) != sorter->mvs + n)
 		{
-			sorter->killer_move1 = tmp_killer_move1;
-			sorter->state = STATE_TT;
+      sorter->mvs_idx = 1;
+			sorter->killer_move2 = tmp_killer_move2;
+      if (sorter->state == STATE_REST) sorter->state = STATE_KILLER2;
 		}
 	}
 	else
@@ -141,9 +144,11 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 			}
 		case STATE_GENE:
 			sorter->state = STATE_REST;
-			n = sorter->engine->board()->generateAllMoves<GENERAL>(sorter->mvs);
-			std::sort(sorter->mvs, sorter->mvs + n, CompareByHistory(sorter->engine));
-			sorter->mvs_size = n;
+      if (sorter->mvs_size == 0) {
+        n = sorter->engine->board()->generateAllMoves<GENERAL>(sorter->mvs);
+        std::sort(sorter->mvs, sorter->mvs + n, CompareByHistory(sorter->engine));
+        sorter->mvs_size = n;
+      }
 		case STATE_REST:
 			while (sorter->mvs_idx < sorter->mvs_size)
 			{
