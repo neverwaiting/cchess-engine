@@ -92,12 +92,12 @@ static inline void set_best_move(struct search_engine* engine, int mv, int depth
   if (mv == 0) return;
 
 	engine->history_heuristic_table[mv] += depth * depth;
-	int* killer_table = engine->killer_heuristic_table[depth];
-  if (mv != killer_table[0])
-  {
-    killer_table[1] = killer_table[0];
-    killer_table[0] = mv;
-  }
+	// int* killer_table = engine->killer_heuristic_table[depth];
+ //  if (mv != killer_table[0])
+ //  {
+ //    killer_table[1] = killer_table[0];
+ //    killer_table[0] = mv;
+ //  }
 }
 
 static inline void search_engine_do_null_move(struct search_engine* engine)
@@ -143,11 +143,11 @@ static inline int repetition_value(struct search_engine* engine, int rep)
 
 void moves_generate_sorter_init(struct moves_generate_sorter* sorter, struct search_engine* engine, int mv_tt)
 {
-	// memset(sorter, 0, sizeof(struct moves_generate_sorter));
-	// sorter->mv_tt = mv_tt;
-	// sorter->state = mv_tt == 0 ? STATE_GENE : STATE_TT;
-  
 	memset(sorter, 0, sizeof(struct moves_generate_sorter));
+	sorter->mv_tt = mv_tt;
+	sorter->state = mv_tt == 0 ? STATE_GENE : STATE_TT;
+  
+	/* memset(sorter, 0, sizeof(struct moves_generate_sorter));
 	sorter->engine = engine;
 	sorter->mv_tt = mv_tt;
 	// 如果被将军的话就不能直接用置换表启发和杀手启发走法
@@ -184,35 +184,35 @@ void moves_generate_sorter_init(struct moves_generate_sorter* sorter, struct sea
 		sorter->state = STATE_TT;
 		sorter->killer_move1 = engine->killer_heuristic_table[engine->distance][0];
     sorter->killer_move2 = engine->killer_heuristic_table[engine->distance][1];
-  }
+  } */
   // printf("%d, %d, %d\n", sorter->mv_tt, sorter->killer_move1, sorter->killer_move2);
 }
 
 int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 {
-	// int n = 0;
-	// switch(sorter->state)
-	// {
-	// 	case STATE_TT:
-	// 		sorter->state = STATE_GENE;
-	// 		if (sorter->mv_tt != 0)
-	// 			return sorter->mv_tt;
-	// 	case STATE_GENE:
-	// 		sorter->state = STATE_REST;
-	// 		n = generate_all_moves(g_engine->board, sorter->mvs);
-	// 		qsort(sorter->mvs, n, sizeof(int), compare_by_history);
-	// 		sorter->mvs_size = n;
-	// 	case STATE_REST:
-	// 		while (sorter->mvs_idx < sorter->mvs_size)
-	// 		{
-	// 			int mv = sorter->mvs[sorter->mvs_idx++];
-	// 			if (mv != sorter->mv_tt)
-	// 				return mv;
-	// 		}
-	// 	default:
-	// 		return 0;
-	// }
 	int n = 0;
+	switch(sorter->state)
+	{
+		case STATE_TT:
+      sorter->state = STATE_GENE;
+			if (sorter->mv_tt != 0)
+				return sorter->mv_tt;
+		case STATE_GENE:
+			sorter->state = STATE_REST;
+			n = generate_all_moves(g_engine->board, sorter->mvs);
+			qsort(sorter->mvs, n, sizeof(int), compare_by_history);
+			sorter->mvs_size = n;
+		case STATE_REST:
+			while (sorter->mvs_idx < sorter->mvs_size)
+			{
+				int mv = sorter->mvs[sorter->mvs_idx++];
+				// if (mv != sorter->mv_tt)
+					return mv;
+			}
+		default:
+			return 0;
+	}
+	/* int n = 0;
 	switch(sorter->state)
 	{
 		case STATE_TT:
@@ -244,9 +244,11 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 			}
 		case STATE_GENE:
 			sorter->state = STATE_REST;
-      n = generate_all_moves(sorter->engine->board, sorter->mvs);
-      qsort(sorter->mvs, n, sizeof(int), compare_by_history);
-			sorter->mvs_size = n;
+      if (sorter->mvs_size > 0) {
+        n = generate_all_moves(sorter->engine->board, sorter->mvs);
+        qsort(sorter->mvs, n, sizeof(int), compare_by_history);
+        sorter->mvs_size = n;
+      }
 		case STATE_REST:
 			while (sorter->mvs_idx < sorter->mvs_size)
 			{
@@ -261,7 +263,7 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 			}
 		default:
 			return 0;
-	}
+	} */
 }
 
 struct search_engine* search_engine_create(struct board* board)
@@ -639,6 +641,7 @@ int search(struct search_engine* engine, int milliseconds)
       uint64_t nps = (uint64_t)engine->all_nodes * 1000 / spendTime;
       printf("info spend time: %lu, all nodes: %d, speed: %lu nodes per second\n", 
              spendTime, engine->all_nodes, nps);
+      board_display(engine->board);
       break;
 		}
 

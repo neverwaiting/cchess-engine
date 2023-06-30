@@ -481,9 +481,9 @@ int Board::generateAllMovesNoncheck(int* mvs)
   int size = currentSidePlayer_->piecesNum();
 	for (int i = 0; i < size; ++i)
 	{
-    printf("player pieces: %d, %d", currentSidePlayer_->piecesNum(), currentSidePlayer_->side());
-    if (pieces[i]) printf(", %s\n", pieces[i]->cname());
-    else printf("\n");
+    // printf("player pieces: %d, %d", currentSidePlayer_->piecesNum(), currentSidePlayer_->side());
+    // if (pieces[i]) printf(", %s\n", pieces[i]->cname());
+    // else printf("\n");
 		n += pieces[i]->generateMvs<mgt>(pieces_, &temp[n]);
 	}
 	for (int i = 0; i < n; ++i)
@@ -509,9 +509,9 @@ int Board::generateAllMoves(int* mvs)
   int size = currentSidePlayer_->piecesNum();
 	for (int i = 0; i < size; ++i)
 	{
-    printf("player pieces: %d, %d", currentSidePlayer_->piecesNum(), currentSidePlayer_->side());
-    if (pieces[i]) printf(", %s\n", pieces[i]->cname());
-    else printf("\n");
+    // printf("player pieces: %d, %d", currentSidePlayer_->piecesNum(), currentSidePlayer_->side());
+    // if (pieces[i]) printf(", %s\n", pieces[i]->cname());
+    // else printf("\n");
 		nums += pieces[i]->generateMvs<mgt>(pieces_, &mvs[nums]);
 	}
 	return nums;

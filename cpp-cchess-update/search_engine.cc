@@ -126,7 +126,7 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 					sorter->killer_move1 != sorter->mv_tt &&
 					sorter->engine->board()->legalMove(sorter->killer_move1))
 			{
-				printf("从杀手表1中检索到杀棋\n");
+				// printf("从杀手表1中检索到杀棋\n");
 				return sorter->killer_move1;
 			}
 		case STATE_KILLER2:
@@ -136,7 +136,7 @@ int moves_generate_sorter_next_move(struct moves_generate_sorter* sorter)
 					sorter->killer_move2 != sorter->killer_move1 &&
 					sorter->engine->board()->legalMove(sorter->killer_move2))
 			{
-				printf("从杀手表2中检索到杀棋\n");
+				// printf("从杀手表2中检索到杀棋\n");
 				return sorter->killer_move2;
 			}
 		case STATE_GENE:
